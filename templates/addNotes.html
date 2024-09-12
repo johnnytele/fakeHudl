@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<link rel="stylesheet" href="{{ url_for('static', filename='styles.css')}}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+
+<body>
+
+	<div class="flex-container">
+		<div class="flex-item-left">
+			<!-- 1. The <iframe> (and video player) will replace this <div> tag. -->
+			<div id="player" ></div>
+		</div>
+		<div class="flex-item-right">
+			<div class="selector">
+				<label for="sets">Choose a set:</label>
+
+				<select name="sets" id="sets">
+                    {% for game in games %}
+                    <option value="{{ game.1 }}">{{ game.0 }}</option>
+                    {% endfor %}
+                </select>
+			</div>
+            <form id="notesForm">
+                <textarea name="message" id="message" rows="10" cols="40" maxlength="5000"></textarea>
+                <input type="hidden" name="selected_set" id="selectedSet" value="">
+                <input type="submit" value="Submit" id="submit">
+            </form>
+            <div id="success" style="display: none;">Comment added!</div>
+            {% for player in players %}
+                <p id="playerNumber"> {{ player.0 }}: {{ player.1 }} </p>
+            {% endfor %}
+			<div/ id="noteArea">
+		</div>
+		
+	
+	</div>
+	
+	
+
+    <script>
+
+		var setCode = document.getElementById("sets").value;
+        document.getElementById("selectedSet").value = setCode;
+		dropdownSets = document.getElementById("sets");
+
+		// 2. This code loads the IFrame Player API code asynchronously.
+		var tag = document.createElement('script');
+
+		tag.src = "https://www.youtube.com/iframe_api";
+		var firstScriptTag = document.getElementsByTagName('script')[0];
+		firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+		// 3. This function creates an <iframe> (and YouTube player)
+		//    after the API code downloads.
+		var player;
+		function onYouTubeIframeAPIReady() {
+			player = new YT.Player('player', {
+				height: '50%',
+				width: '100%',
+				videoId: setCode,
+				playerVars: {
+					'playsinline': 1
+				},
+				events: {
+					'onReady': onPlayerReady
+				}
+			});
+		}
+
+		// 4. The API will call this function when the video player is ready.
+		function onPlayerReady(event) {
+			event.target.playVideo();
+		}
+
+		// Add an event listener for the 'change' event
+		dropdownSets.addEventListener('change', function() {
+			setCode = dropdownSets.value;
+            document.getElementById("selectedSet").value = setCode;
+			player.loadVideoById( setCode );
+			updateNotes();
+		});
+
+        // Asynchronous form submission
+        $("#notesForm").submit(function(e) {
+            e.preventDefault();
+            var formData = $(this).serialize();
+            $.ajax({
+                type: "POST",
+                url: "/addNotes",
+                data: formData,
+                success: function() {
+					updateNotes();
+                    $("#success").show();
+                    setTimeout(function() {
+                        $("#success").hide();
+                    }, 10000);
+                    $("#message").val("");
+                },
+                fail: function() {
+                    alert("An error occurred. Please try again.");
+                }
+            });
+        });
+
+		function updateNotes() {
+			$.ajax({
+				type: "GET",
+				url: "/getNotesNoPlayer",
+				data: { setCode: setCode },
+				success: function(data, status) {
+					if (data.length == 0) {
+						$("#noteArea").empty();
+						$("#noteArea").append('<div id="note">No notes for this player in this set</div>');
+					} else {
+						$("#noteArea").empty();
+						for (var i = 0; i < data.length; i++) {
+							var noteID = data[i][2];
+							var time = data[i][1];
+							var seconds = time % 60;
+							if (seconds == 0) {
+								seconds = "00";
+							} else if (seconds < 10) {
+								seconds = "0" + seconds;
+							}
+							var minutes = (time - seconds) / 60;
+							$("#noteArea").append('<div id="note" onClick="deleteNote(' + noteID + ')">' + data[i][3] + " - " + minutes + ':' + seconds + ' - ' + data[i][0] + '</div>');
+						}
+					}
+				},
+				error: function() {
+					alert("error")
+				}
+			})
+		}
+
+		function deleteNote(noteID) {
+			if (confirm("Delete Note?")) {
+				$.ajax({
+					type: "POST",
+					url: "/deleteNote",
+					data: { noteID: noteID },
+					success: function() {
+						updateNotes();
+					},
+					error: function() {
+						alert("error")
+					}
+				})
+			} else {
+				// Do nothing!
+			}
+			
+		}
+		
+
+		updateNotes();
+	
+    </script>
+
+</body>
+</html>

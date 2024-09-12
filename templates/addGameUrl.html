@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css')}}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <title>Insert Game Data</title>
+</head>
+<body>
+    <h1>Insert Game Data</h1>
+    <form id="addGameForm" method="post">
+        <label for="title">Title:</label><br>
+        <input type="text" id="title" name="title"><br>
+        <label for="date">Date:</label><br>
+        <input type="date" id="date" name="date"><br>
+        <label for="url">URL:</label><br>
+        <input type="text" id="url" name="url"><br><br>
+        <input type="submit" value="Submit">
+    </form>
+    <div id="success" style="display: none;">Game added!</div>
+    <script>
+        // Asynchronous form submission
+        $("#addGameForm").submit(function(e) {
+            e.preventDefault();
+            var formData = $(this).serialize();
+            $.ajax({
+                type: "POST",
+                url: "/insert_game_url",
+                data: formData,
+                success: function() {
+                    $("#success").show();
+                    setTimeout(function() {
+                        $("#success").hide();
+                    }, 10000);
+                    $("#url").val("");
+                },
+                fail: function() {
+                    alert("An error occurred. Please try again.");
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
